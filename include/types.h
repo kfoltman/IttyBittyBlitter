@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <math.h>
 
 struct RGB565
 {
@@ -40,6 +41,9 @@ struct RGB565
     inline uint32_t g6() const { return (value >> 5) & 0x3F; }
     inline uint8_t b8() const { return (value & 0x1F) << 3; }
     inline uint32_t b5() const { return value & 0x1F; }    
+    inline float luma() const {
+        return 0.299f * r8() + 0.587f * g8() + 0.114f * b8();
+    }
 };
 
 struct Point
@@ -68,3 +72,37 @@ struct Rect
     int16_t height() const { return br.y - tl.y; }
 };
 
+struct Palette16
+{
+    RGB565 cmap[16];
+    int reserve;
+
+    Palette16(RGB565 bg, RGB565 fg, int _reserve = 0)
+    : reserve(_reserve)
+    {
+        cmap[0] = bg;
+        cmap[15 - reserve] = fg;
+        float luma1 = fg.luma() / 255.0;
+        float luma2 = bg.luma() / 255.0;
+        // This is NOT a correct calculation. Looks somewhat OKish though.
+        float gamma = powf(1.5, luma2 - luma1);
+        for (int i = 1; i < 15 - reserve; ++i) {
+            unsigned fgv = 256 * powf(i / (15.0 - reserve), gamma);
+            unsigned bgv = 256 - fgv;
+            cmap[i] = RGB565::rgb888(
+                (bg.r8() * bgv + fg.r8() * fgv) >> 8,
+                (bg.g8() * bgv + fg.g8() * fgv) >> 8,
+                (bg.b8() * bgv + fg.b8() * fgv) >> 8);
+        }
+    }
+    void setColour(int slot, RGB565 colour)
+    {
+        cmap[15 - slot] = colour;
+    }
+    RGB565 fg() const {
+        return cmap[15 - reserve];
+    }
+    RGB565 bg() const {
+        return cmap[0];
+    }
+};
