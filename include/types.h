@@ -4,7 +4,7 @@
 
 struct RGB565
 {
-    uint16_t value;
+    uint16_t value = 0;
     
     static inline constexpr RGB565 from565(uint8_t r, uint8_t g, uint8_t b) {
         return RGB565((uint16_t)(b | (uint16_t(g) << 5) | (uint16_t(r) << 11)));
@@ -28,7 +28,7 @@ struct RGB565
         return RGB565(value);
     }
 
-    
+    RGB565() = default;
     explicit constexpr RGB565(uint16_t _value)
     : value(_value)
     {}
