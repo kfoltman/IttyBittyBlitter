@@ -15,8 +15,13 @@ def font_export(of, export_name, family, size, weight=QFont.Weight.Normal, itali
     font.setPixelSize(size)
     if not antialias:
         font.setStyleStrategy(QFont.StyleStrategy.NoAntialias)
+    else:
+        font.setStyleStrategy(QFont.StyleStrategy.PreferAntialias | QFont.StyleStrategy.NoSubpixelAntialias)
     font.setHintingPreference(QFont.HintingPreference.PreferFullHinting)
     font.setFixedPitch(True)
+    finfo = QFontInfo(font)
+    if font.family() != finfo.family():
+        print (f"Warning: Using a substitute font {finfo.family()} instead of {font.family()}")
     metrics = QFontMetrics(font)
     charDefs = []
     totalWidth = 0
