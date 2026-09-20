@@ -10,12 +10,10 @@ class SDLDisplay: public BaseDisplayOps<SDLDisplay>
 private:
     int zoom;
     SDL_Surface *pc_display;
-    Rect clip;
 public:
     SDLDisplay(int _w, int _h, int _zoom = 1)
     : BaseDisplayOps(_w, _h)
     , zoom(_zoom)
-    , clip(0, 0, _w, _h)
     {}
     void init() override {
         pc_display = SDL_SetVideoMode(w * zoom, h * zoom, 16, 0);
@@ -23,15 +21,8 @@ public:
     void complete() {
         SDL_Flip(pc_display);
     }
-    void setClipRect(const Rect &cr) {
-        clip = Rect(std::max<int16_t>(0, cr.left()), std::max<int16_t>(0, cr.top()), std::min<int16_t>(w, cr.right()), std::min<int16_t>(h, cr.bottom()));
-    }
     template<typename Gen>
-    static void output(BaseDisplayOps<SDLDisplay> *obj, const Rect &rect, Gen &gen) {
-        auto *self = static_cast<SDLDisplay *>(obj);
-        SDL_Surface *pc_display = self->pc_display;
-        auto &clip = self->clip;
-        auto zoom = self->zoom;
+    void output(const Rect &rect, Gen &gen) {
         if (rect.width() < 0 || rect.height() < 0)
             return;
         int yt = std::max(rect.top(), clip.top());
@@ -69,19 +60,6 @@ public:
         }
     }
 };
-
-void circle(BaseDisplay &disp, int xc, int yc, int r, RGB565 fg)
-{
-    int ys = std::max<int16_t>(0, yc - r);
-    int ye = std::min<int16_t>(disp.height(), yc + r + 1);
-    int w = disp.width();
-
-    for (int y = ys; y < ye; ++y) {
-        float xrf = sqrtf(r * r - (y - yc) * (y - yc));
-        int xr = ceil(xrf);
-        disp.fill(Rect(std::max<int16_t>(0, xc - xr), y, std::min<int16_t>(xc + xr + 1, w), y + 1), fg);
-    }
-}
 
 int main(int argc, char *argv[])
 {

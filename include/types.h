@@ -70,6 +70,8 @@ struct Rect
     int16_t bottom_inc() const { return br.y - 1; }
     int16_t width() const { return br.x - tl.x; }
     int16_t height() const { return br.y - tl.y; }
+    bool empty() const { return tl.x >= br.x || tl.y >= br.y; }
+    Rect intersection(const Rect &r2) const { return Rect(std::max(tl.x, r2.tl.x), std::max(tl.y, r2.tl.y), std::min(br.x, r2.br.x), std::min(br.y, r2.br.y)); }
 };
 
 struct Palette16

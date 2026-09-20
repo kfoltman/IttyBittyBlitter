@@ -6,11 +6,18 @@ class BaseDisplay
 {
 protected:
     int16_t w, h;
-    BaseDisplay(int16_t _w, int16_t _h) : w(_w), h(_h) {}
+    Rect clip;
     virtual ~BaseDisplay() {}
 public:
+    BaseDisplay(int16_t _w, int16_t _h)
+    : w(_w)
+    , h(_h)
+    , clip(0, 0, _w, _h) {}
     inline int16_t width() const { return w; }
     inline int16_t height() const { return h; }
+    void setClipRect(const Rect &cr) {
+        clip = Rect(std::max<int16_t>(0, cr.left()), std::max<int16_t>(0, cr.top()), std::min<int16_t>(w, cr.right()), std::min<int16_t>(h, cr.bottom()));
+    }
     virtual void init() = 0;
     virtual void complete() {}
     virtual void fill(const Rect &rect, RGB565 colour) = 0;
@@ -23,7 +30,12 @@ template<typename T>
 class BaseDisplayOps: public BaseDisplay
 {
 public:
-    BaseDisplayOps(int16_t _w, int16_t _h) : BaseDisplay(_w, _h) {}
+    using BaseDisplay::BaseDisplay;
+    template<typename Gen>
+    static inline void output(BaseDisplayOps<T> *obj, const Rect &rect, Gen &gen)
+    {
+        static_cast<T*>(obj)->output(rect, gen);
+    }
     void fill(const Rect &rect, RGB565 colour) {
         struct Solid {
             uint16_t val;
@@ -32,7 +44,7 @@ public:
             inline void skip(int) const {}
         };
         Solid solid{colour.val()};
-        T::output(this, rect, solid);
+        output(this, rect, solid);
     }
     void copy(const Rect &rect, const RGB565 *src) {
         struct Slurp {
@@ -49,7 +61,7 @@ public:
             }
         };
         Slurp slurp{src, 0, rect.width()};
-        T::output(this, rect, slurp);
+        output(this, rect, slurp);
     }
     void copy1bit(const Point &pt, int pixels, int height, const uint8_t *src, int x_offset, int pitch, RGB565 bg, RGB565 fg) {
         struct Slurp {
@@ -72,7 +84,7 @@ public:
             }
         };
         Slurp slurp{src, x_offset, x_offset, pitch, bg.val(), fg.val()};
-        T::output(this, Rect(pt.x, pt.y, pt.x + pixels, pt.y + height), slurp);
+        output(this, Rect(pt.x, pt.y, pt.x + pixels, pt.y + height), slurp);
     }
     void copy4bit(const Point &pt, int pixels, int height, const uint8_t *src, int x_offset, int pitch, const RGB565 *cmap) {
         struct Slurp {
@@ -95,6 +107,8 @@ public:
             }
         };
         Slurp slurp{src, x_offset, x_offset, pitch, cmap};
-        T::output(this, Rect(pt.x, pt.y, pt.x + pixels, pt.y + height), slurp);
+        output(this, Rect(pt.x, pt.y, pt.x + pixels, pt.y + height), slurp);
     }
 };
+
+extern void circle(BaseDisplay &disp, int xc, int yc, int r, RGB565 fg);
