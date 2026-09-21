@@ -8,7 +8,7 @@ void circle(BaseDisplay &disp, int xc, int yc, int r, RGB565 fg)
 
     for (int y = ys; y < ye; ++y) {
         float xrf = sqrtf(r * r - (y - yc) * (y - yc));
-        int xr = ceil(xrf);
+        int xr = ceilf(xrf);
         disp.fill(Rect(std::max<int16_t>(0, xc - xr), y, std::min<int16_t>(xc + xr + 1, w), y + 1), fg);
     }
 }
