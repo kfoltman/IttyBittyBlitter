@@ -197,11 +197,11 @@ template<class DisplayInterface, int STRIPE_HEIGHT>
 class STM32DoubleBufferDisplay: public BaseDisplayOps<STM32DoubleBufferDisplay<DisplayInterface, STRIPE_HEIGHT>>
 {
     uint16_t stripe[STRIPE_HEIGHT][(DisplayInterface::WIDTH)];
-    static constexpr int WIDTH = DisplayInterface::WIDTH;
-    static constexpr int HEIGHT = DisplayInterface::HEIGHT;
     int nstripe = 0;
     Rect stripe_rect;
 public:
+    static constexpr int WIDTH = DisplayInterface::WIDTH;
+    static constexpr int HEIGHT = DisplayInterface::HEIGHT;
     static const int nstripes = (HEIGHT + STRIPE_HEIGHT - 1) / STRIPE_HEIGHT;
 
     STM32DoubleBufferDisplay()
