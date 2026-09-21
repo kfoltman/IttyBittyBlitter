@@ -112,6 +112,12 @@ int main(int argc, char *argv[])
         circle(display, cx, 160, 120, RGB565::rgb888(0xFFFF00));
         font_small.drawText(display, palette, Point(cx - textw / 2, 160 - font_small.height), text);
         font_small.drawText(display, palette2, Point(cx - textw / 2, 160), text);
+
+        auto pt = [](float angle) { return Point(240 + 40 * cosf(angle), 100 + 40 * sinf(angle)); };
+
+        float a = t * 3.1415f / 40;
+        float d = 3.1415f / 10;
+        triangle(display, Point(240, 100), pt(a + d), pt(a + 2 * d), RGB565::rgb888(0xFF0000));
         display.complete();
 
         usleep(20000);
