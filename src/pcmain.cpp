@@ -117,7 +117,9 @@ int main(int argc, char *argv[])
 
         float a = t * 3.1415f / 40;
         float d = 3.1415f / 10;
-        triangle(display, Point(240, 100), pt(a + d), pt(a + 2 * d), RGB565::rgb888(0xFF0000));
+        for (int i = 0; i < 20; ++i) {
+            triangle(display, Point(240, 100), pt(a + d + i * d), pt(a + 2 * d + i * d), RGB565::rgb888(i * 0x180C00));
+        }
         display.complete();
 
         usleep(20000);
