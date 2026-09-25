@@ -1,9 +1,9 @@
-#include <assert.h>
-#include <math.h>
-#include <unistd.h>
 #include <SDL/SDL.h>
+#include <ctime>
 #include "display.h"
 #include "fonts.h"
+
+#include "demo.h"
 
 class SDLDisplay: public BaseDisplayOps<SDLDisplay>
 {
@@ -70,59 +70,17 @@ int main(int argc, char *argv[])
     }
 
     SDLDisplay display(480, 320, 2);
+    Demo demo;
 
     bool quit = false;
     display.init();
-    int t = 0;
-    static const uint8_t face[8] = { 255, 195, 165, 129, 165, 153, 195, 255 };
-    RGB565 face2[16 * 16];
-    for (int i = 0; i < 16; ++i) {
-        int t = 7 + (i < 8 ? i : 16 - i);
-        auto fg = RGB565::rgb888(t * 16, 0, 0);
-        for (int j = 0; j < 16; ++j) {
-            face2[16 * i + j] = face[i >> 1] & (128 >> (j >> 1)) ? RGB565::rgb888(0xFFFFFF) : fg;
-        }
-    }
-    //display.setClipRect(Rect(40, 40, 480 - 40, 320 - 40));
-    display.setClipRect(Rect(5, 5, 480 - 5, 320 - 5));
-    const char text[] = "Hello cruel world";
-    int textw = font_small.textWidth(text);
+    demo.init();
+    
+    clock_t start = clock();
+
     while(true) {
-        Palette16 palette(RGB565::rgb888(0xFFFF00), RGB565::rgb888((t & 63) * 0x000400));
-        Palette16 palette2(RGB565::rgb888(0x000000), RGB565::rgb888((t & 63) * 0x000400));
-        t++;
-        for (int i = 0; i < 30; ++i) {
-            for (int j = 0; j < 20; ++j) {
-                RGB565 colour = ((i ^ j) & 1) ? RGB565::rgb888(0xFFFFFF) : RGB565::rgb888(0x000000);
-                display.fill(Rect(i * 16, j * 16, (i + 1) * 16, (j + 1) * 16), colour);
-            }
-        }
-        for (int i = 0; i < 30; i += 4) {
-            for (int j = 0; j < 20; j += 4) {
-                display.copy(Rect(i * 16, j * 16, i * 16 + 16, j * 16 + 16), face2);
-            }
-        }
-        for (int i = 2; i < 30; i += 4) {
-            for (int j = 2; j < 20; j += 4) {
-                display.copy1bit(Point(i * 16 + 4, j * 16 + 4), 8, 8, face, 0, 1, RGB565::rgb888(0x00FF00), RGB565::rgb888(0x000000));
-            }
-        }
-        int cx = (t * 3) % (480 + 2 * 120) - 120;
-        cx = 240;
-        circle(display, cx, 160, 120, RGB565::rgb888(0xFFFF00));
-        font_small.drawText(display, palette, Point(cx - textw / 2, 160 - font_small.height), text);
-        font_small.drawText(display, palette2, Point(cx - textw / 2, 160), text);
+        demo.loop(display, (clock() - start) / 1000);
 
-        auto pt = [](float angle) { return Point(240 + 40 * cosf(angle), 100 + 40 * sinf(angle)); };
-
-        float a = t * 3.1415f / 40;
-        float d = 3.1415f / 10;
-        for (int i = 0; i < 20; ++i) {
-            triangle(display, Point(240, 100), pt(a + d + i * d), pt(a + 2 * d + i * d), RGB565::rgb888(i * 0x180C00));
-        }
-        display.complete();
-
-        usleep(20000);
         SDL_Event sdlEvent;
         bool quit = false;
         while(SDL_PollEvent(&sdlEvent)) {

@@ -38,4 +38,38 @@ void Font::drawText(BaseDisplay &disp, const Palette16 &palette, Point pt, const
     }
 }
 
+void Font::drawPaddedText(BaseDisplay &disp, const Palette16 &palette, Rect rc, uint32_t flags, const char *text, int len)
+{
+    if (len == -1)
+        len = strlen(text);
+    int width = textWidth(text, len);
+    int hpos = 0;
+    uint32_t halign = flags & DT_HALIGN_MASK;
+    if (halign == DT_RIGHT)
+        hpos = std::max(0, rc.width() - width);
+    if (halign == DT_CENTRE)
+        hpos = std::max(0, (rc.width() - width) / 2);
+    if (width > rc.width() || height > rc.height()) {
+        Rect oldClip = disp.getClipRect();
+        disp.setClipRect(oldClip.intersection(rc));
+        drawText(disp, palette, Point(rc.tl.x + hpos, rc.tl.y), text, len);
+        disp.setClipRect(oldClip);
+    } else {
+        drawText(disp, palette, Point(rc.tl.x + hpos, rc.tl.y), text, len);
+    }
+    if (height < rc.height()) {
+        disp.fill(Rect(rc.left(), rc.top() + height, rc.right(), rc.bottom()), palette.bg());
+    }
+    if (width < rc.width()) {
+        if (halign == DT_RIGHT)
+            disp.fill(Rect(rc.left(), rc.top(), rc.right() - width, rc.top() + height), palette.bg());
+        else if (halign == DT_CENTRE) {
+            disp.fill(Rect(rc.left(), rc.top(), rc.left() + hpos, rc.top() + height), palette.bg());
+            disp.fill(Rect(rc.left() + hpos + width, rc.top(), rc.right(), rc.top() + height), palette.bg());
+        }
+        else
+            disp.fill(Rect(rc.left() + width, rc.top(), rc.right(), rc.top() + height), palette.bg());
+    }
+}
+
 #include "fonts.inc"

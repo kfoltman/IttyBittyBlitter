@@ -28,6 +28,15 @@ struct RGB565
         uint16_t value = (r << 11) | (g << 5) | b;
         return RGB565(value);
     }
+    static inline RGB565 blend(RGB565 bg, RGB565 fg, uint8_t alpha)
+    {
+        int nalpha = 16 - alpha;
+        return RGB565::from565(
+            (bg.r5() * nalpha + fg.r5() * alpha) >> 4,
+            (bg.g6() * nalpha + fg.g6() * alpha) >> 4,
+            (bg.b5() * nalpha + fg.b5() * alpha) >> 4
+        );
+    }
 
     RGB565() = default;
     explicit constexpr RGB565(uint16_t _value)
@@ -79,6 +88,10 @@ struct Palette16
     RGB565 cmap[16];
     int reserve;
 
+    Palette16()
+    {
+        reserve = 0;
+    }
     Palette16(RGB565 bg, RGB565 fg, int _reserve = 0)
     : reserve(_reserve)
     {

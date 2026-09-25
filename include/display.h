@@ -18,6 +18,9 @@ public:
     void setClipRect(const Rect &cr) {
         clip = Rect(std::max<int16_t>(0, cr.left()), std::max<int16_t>(0, cr.top()), std::min<int16_t>(w, cr.right()), std::min<int16_t>(h, cr.bottom()));
     }
+    const Rect &getClipRect() {
+        return clip;
+    }
     virtual void init() = 0;
     virtual void complete() {}
     virtual void fill(const Rect &rect, RGB565 colour) = 0;

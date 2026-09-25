@@ -22,14 +22,8 @@ public:
     static volatile uint16_t &lcd_ctl;
     static volatile uint16_t &lcd_data;
 
-    static void init()
+    static void initMPU()
     {
-        // FMC pins
-        __HAL_RCC_GPIOD_CLK_ENABLE();
-        __HAL_RCC_GPIOE_CLK_ENABLE();
-        // FMC itself
-        __HAL_RCC_FMC_CLK_ENABLE();
-
         // MPU region for the TFT
         HAL_MPU_Disable();
         MPU_Region_InitTypeDef MPU_InitStruct;
@@ -47,13 +41,39 @@ public:
         MPU_InitStruct.DisableExec      = MPU_INSTRUCTION_ACCESS_DISABLE;
         HAL_MPU_ConfigRegion(&MPU_InitStruct);
         HAL_MPU_Enable(MPU_PRIVILEGED_DEFAULT);
+    }
 
+    static void initPins()
+    {
         // Set the GPIO properties for FMC pins
-        fsmcPinRange(GPIOD, 0, 1);
-        fsmcPinRange(GPIOD, 4, 5);
-        fsmcPinRange(GPIOD, 7, 11);
-        fsmcPinRange(GPIOD, 14, 15);
-        fsmcPinRange(GPIOE, 7, 15);
+        fsmcPinRange(GPIOD, 0, 1);  // D2, D3
+        fsmcPinRange(GPIOD, 4, 5);  // NOE, NWE
+        fsmcPinRange(GPIOD, 7, 10); // NE1, D13..D14
+        fsmcPinRange(GPIOD, 14, 15);// D0, D1
+        fsmcPinRange(GPIOE, 7, 15); // D4..D12
+
+        switch(DataAddrLine)
+        {
+            case 16: fsmcPinRange(GPIOD, 11, 11); break;
+            case 17: fsmcPinRange(GPIOD, 12, 12); break;
+            case 18: fsmcPinRange(GPIOD, 13, 13); break;
+            case 19: fsmcPinRange(GPIOE, 3, 3); break;
+            case 20: fsmcPinRange(GPIOE, 4, 4); break;
+            case 21: fsmcPinRange(GPIOE, 5, 5); break;
+            case 22: fsmcPinRange(GPIOD, 6, 6); break;
+        }
+    }
+
+    static void init()
+    {
+        // FMC pins
+        __HAL_RCC_GPIOD_CLK_ENABLE();
+        __HAL_RCC_GPIOE_CLK_ENABLE();
+        // FMC itself
+        __HAL_RCC_FMC_CLK_ENABLE();
+
+        initMPU();
+        initPins();
 
         // Program the FMC
         uint32_t bcr =  (1 << 31) |
@@ -66,7 +86,7 @@ public:
 
         // Those timings are OK for 480 MHz. They can be reduced substantially
         // for lower clock rates!
-        uint32_t btr = (3 << 20) | (7 << 16) | (7 << 8) | (7 << 4) | (7 << 0);
+        uint32_t btr = (15 << 24) | (15 << 20) | (15 << 16) | (25 << 8) | (15 << 4) | (15 << 0);
         *(volatile uint32_t *)0x52004000 = bcr;
         *(volatile uint32_t *)0x52004004 = btr;
     }
