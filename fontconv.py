@@ -11,6 +11,9 @@ def font_export(of, export_name, family, size, weight=QFont.Weight.Normal, itali
     if charset is None:
         charset = char_range(33, 127)
     charset = list(charset) + list(extra_chars)
+    charset = list(sorted(charset))
+    lowest = ord(min(charset))
+    highest = ord(max(charset))
     font = QFont(family, int(size), weight, italic)
     font.setPixelSize(size)
     if not antialias:
@@ -64,13 +67,20 @@ def font_export(of, export_name, family, size, weight=QFont.Weight.Normal, itali
     font_bits = ""
     font_widths = ""
     font_xs = ""
+    xsmap = {}
     for ch, size, pixmap in charDefs:
         img = pixmap.toImage()
         # font_bits += f"// Character: '{ch}'\n"
-        font_xs += f"    {x}, // '{ch}'\n"
+        xsmap[ord(ch)] = x
         font_widths += f"{size.width()}, // '{ch}'\n"
         painter.drawPixmap(x, 0, pixmap)
         x += size.width()
+        xsmap[ord(ch) + 1] = x
+    last = 0
+    for i in range(lowest, highest + 1):
+        next = xsmap.get(i, last)
+        font_xs += f"    {next}, // '{chr(i)}'\n"
+        last = next
     font_xs += f"    {x}, // end\n"
     painter = None
     bpp = antialias_bpp if antialias else 1
@@ -119,7 +129,7 @@ static const uint8_t {export_name}_bits[] = {"{"}
 Font {export_name} = {"{"}
     .xs={export_name}_xs,
     .bits={export_name}_bits,
-    .firstChar={firstChar}, .charCount={charCount},
+    .firstChar={firstChar}, .charCount={highest-lowest+1},
     .height={maxHeight},
     .spaceWidth={metrics.size(0, ' ').width()},
     .pitch={nbytes // maxHeight},
@@ -130,6 +140,7 @@ Font {export_name} = {"{"}
 nbytes = 0
 app = QGuiApplication(sys.argv)
 with open("src/fonts.inc", "w") as of:
-    nbytes += font_export(of, 'font_small', 'Bitstream Vera Sans', 22, antialias=True)
+    nbytes += font_export(of, 'font_small', 'DejaVu Sans', 22, antialias=True)
+    nbytes += font_export(of, 'font_large', 'DejaVu Sans Mono', 48, antialias=True, charset=".:0123456789ABCXYZ")
 
 print (f"Total {nbytes} bytes")
