@@ -60,7 +60,7 @@ public:
             case 19: fsmcPinRange(GPIOE, 3, 3); break;
             case 20: fsmcPinRange(GPIOE, 4, 4); break;
             case 21: fsmcPinRange(GPIOE, 5, 5); break;
-            case 22: fsmcPinRange(GPIOD, 6, 6); break;
+            case 22: fsmcPinRange(GPIOE, 6, 6); break;
         }
     }
 
