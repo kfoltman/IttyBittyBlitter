@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <initializer_list>
+#include <functional>
 #include <Arduino.h>
 
 template<int DataAddrLine, uint32_t mpu_region>
@@ -21,6 +22,9 @@ class STM32FMC
 public:
     static volatile uint16_t &lcd_ctl;
     static volatile uint16_t &lcd_data;
+
+    static DMA_HandleTypeDef dma;
+    static std::function<void()> dmaCallback;
 
     static void initMPU()
     {
@@ -64,17 +68,40 @@ public:
         }
     }
 
-    static void init()
+    static void initDMA()
+    {
+        __HAL_RCC_DMA1_CLK_ENABLE();
+        dma.Instance = DMA1_Stream0;
+        dma.Init.Request = DMA_REQUEST_MEM2MEM;
+        dma.Init.Direction = DMA_MEMORY_TO_MEMORY;
+        dma.Init.PeriphInc = DMA_PINC_ENABLE;
+        dma.Init.MemInc = DMA_MINC_DISABLE; // Do not increment the output address
+        dma.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
+        dma.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
+        dma.Init.Mode = DMA_NORMAL;
+        dma.Init.Priority = DMA_PRIORITY_LOW;
+        dma.Init.FIFOMode = DMA_FIFOMODE_ENABLE;
+        dma.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_HALFFULL;
+        dma.Init.MemBurst = DMA_MBURST_SINGLE;
+        dma.Init.PeriphBurst = DMA_PBURST_SINGLE;
+        if (HAL_DMA_Init(&dma) != HAL_OK)
+        {
+            // Red error LED
+            pinMode(PC5, OUTPUT);
+            digitalWrite(PC5, LOW);
+            // can't do anything sensible here
+        }
+        HAL_NVIC_SetPriority(DMA1_Stream0_IRQn, 0, 0);
+        HAL_NVIC_EnableIRQ(DMA1_Stream0_IRQn);
+    }
+
+    static void initFMC()
     {
         // FMC pins
         __HAL_RCC_GPIOD_CLK_ENABLE();
         __HAL_RCC_GPIOE_CLK_ENABLE();
         // FMC itself
         __HAL_RCC_FMC_CLK_ENABLE();
-
-        initMPU();
-        initPins();
-
         // Program the FMC
         uint32_t bcr =  (1 << 31) |
                         (0 << 14) |  // EXTMOD (diffferent timings for R vs W)
@@ -89,6 +116,14 @@ public:
         uint32_t btr = (15 << 24) | (15 << 20) | (15 << 16) | (25 << 8) | (15 << 4) | (15 << 0);
         *(volatile uint32_t *)0x52004000 = bcr;
         *(volatile uint32_t *)0x52004004 = btr;
+    }
+
+    static void init()
+    {
+        initFMC();
+        initDMA();
+        initMPU();
+        initPins();
     }
 
     static inline void cmd(uint8_t cmd)
@@ -108,7 +143,41 @@ public:
     {
         lcd_data = data;
     }
+
+    static inline void pixels(const volatile uint16_t *src, uint32_t count, std::function<void()> endCallback) {
+        constexpr bool useDMA = true;
+        if (useDMA) {
+            dmaCallback.swap(endCallback);
+            uint32_t addr = (uint32_t)src;
+            addr &= ~31;
+            uint32_t addr2 = ((uint32_t)src) + 2 * count + 31;
+            addr2 &= ~31;
+            __disable_irq();
+            SCB_CleanDCache_by_Addr((void *)addr, addr2 - addr);
+            __enable_irq();
+            HAL_DMA_Start_IT(&dma, (uint32_t)src, (uint32_t)&lcd_data, count);
+        } else  {
+            for (uint32_t i = 0; i < count; ++i)
+                lcd_data = src[i];
+            endCallback();
+        }
+    }
+    static inline bool busy() {
+        return (bool)dmaCallback;
+    }
+    static void onDmaIrq() {
+        HAL_DMA_IRQHandler(&dma);
+        std::function<void()> callback;
+        swap(callback, dmaCallback);
+        callback();
+    }
 };
+
+template<int DataAddrLine, uint32_t mpu_region>
+DMA_HandleTypeDef STM32FMC<DataAddrLine, mpu_region>::dma;
+
+template<int DataAddrLine, uint32_t mpu_region>
+std::function<void()> STM32FMC<DataAddrLine, mpu_region>::dmaCallback;
 
 template<int DataAddrLine, uint32_t mpu_region>
 volatile uint16_t &STM32FMC<DataAddrLine, mpu_region>::lcd_ctl = *reinterpret_cast<volatile uint16_t *>(0x60000000);
@@ -131,7 +200,7 @@ public:
         DisplayBus::cmd(0x2b, HI(yt), LO(yt), HI(yb - 1), LO(yb - 1));
         DisplayBus::cmd(0x2c);
     }
-    
+
     static void init() {
         DisplayBus::init();
         

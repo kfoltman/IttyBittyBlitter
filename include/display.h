@@ -114,5 +114,131 @@ public:
     }
 };
 
+template<class DisplayInterface>
+class ChunkOutputDisplay: public BaseDisplayOps<ChunkOutputDisplay<DisplayInterface> >
+{
+protected:
+    volatile uint16_t *data; // must point to DMAable memory
+    uint32_t size, limit;
+    volatile uint32_t read_ptr, write_ptr;
+protected:
+    int availableToWrite() const {
+        return (read_ptr <= write_ptr) ? (size - 1 - write_ptr + read_ptr) : (read_ptr - write_ptr - 1);
+    }
+    inline void write(uint16_t value) {
+        data[write_ptr++] = value;
+        if (write_ptr == size)
+            write_ptr = 0;
+    }
+    inline uint16_t read() {
+        uint16_t value = data[read_ptr++];
+        if (read_ptr == size)
+            read_ptr = 0;
+        return value;
+    }
+    void writeArea(int xl, int yt, int xr, int yb) {
+        // Cannot distinguish between full and empty with two pointers, so 1 byte will get wasted.
+        write(xl);
+        write(yt);
+        write(xr);
+        write(yb);
+    }
+    void trySendChunk() {
+        if (read_ptr != write_ptr) {
+            if (canSendChunk()) {
+                int xl = read();
+                int yt = read();
+                int xr = read();
+                int yb = read();
+                sendChunk(xl, yt, xr, yb);
+            } else {
+                idle();
+            }
+        }
+    }
+    bool canSendChunk() {
+        if (DisplayInterface::busy())
+            return false;
+        if (read_ptr == write_ptr)
+            return false;
+        return true;
+    }
+    void sendChunk(int xl, int yt, int xr, int yb) {
+        DisplayInterface::writeArea(xl, yt, xr, yb);
+        uint32_t words = (xr - xl) * (yb - yt);
+        if (read_ptr + words > size) {
+            uint32_t span = size - read_ptr;
+            uint32_t rest = words - span;
+            DisplayInterface::pixels(&data[read_ptr], span, [this, rest] {
+                read_ptr = 0;
+                DisplayInterface::pixels(&data[0], rest, [this, rest] {
+                    read_ptr = rest;
+                });
+            });
+            return;
+        }
+        DisplayInterface::pixels(&data[read_ptr], words, [this, words] {
+            read_ptr = (read_ptr + words) % size;
+        });
+    }
+public:
+    static constexpr int WIDTH = DisplayInterface::WIDTH;
+    static constexpr int HEIGHT = DisplayInterface::HEIGHT;
+    ChunkOutputDisplay(uint16_t *_data, uint32_t _size)
+    : BaseDisplayOps<ChunkOutputDisplay<DisplayInterface>>(WIDTH, HEIGHT)
+    , data{_data}
+    , size{_size}
+    , read_ptr{0}
+    , write_ptr{0}
+    {
+        // 64K DMA limit or not more than 25% of the buffer,
+        // including the header
+        limit = std::min<uint32_t>(size / 4 - 5, 65535);
+    }
+    void init() {
+        DisplayInterface::init();
+    }
+    virtual void idle() {
+    }
+    void complete() {
+        while(read_ptr != write_ptr)
+            trySendChunk();
+    }
+
+    template<typename Gen>
+    void output(const Rect &rect, Gen &gen) {
+        if (rect.empty())
+            return;
+        Rect clipped = rect.intersection(this->clip);
+        if (clipped.empty())
+            return;
+        int xl = clipped.left(), xr = clipped.right();
+        int yt = clipped.top(), yb = clipped.bottom();
+
+        if (yt > rect.top())
+            gen.line(yt - rect.top());
+        for (int y0 = yt; y0 < yb; ) {
+            int space = availableToWrite() - 4;
+            if (space > (int)limit)
+                space = limit;
+            int max_lines = space / (xr - xl);
+            if (max_lines < 1) {
+                trySendChunk();
+                continue;
+            }
+            int ye = std::min(y0 + max_lines, yb);
+            writeArea(xl, y0, xr, ye);
+            for (int y = y0; y < ye; ++y) {
+                if (xl > rect.left())
+                    gen.skip(xl - rect.left());
+                for (int x = xl; x < xr; ++x)
+                    write(gen.next());
+                gen.line(1);
+            }
+            y0 = ye;
+        }
+    }
+};
+
 extern void circle(BaseDisplay &disp, int xc, int yc, int r, RGB565 fg);
 extern void triangle(BaseDisplay &disp, Point p1, Point p2, Point p3, RGB565 fg);

@@ -1,6 +1,8 @@
 #include "display.h"
 #include <cassert>
 
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
 void circle(BaseDisplay &disp, int xc, int yc, int r, RGB565 fg)
 {
     int ys = std::max<int16_t>(0, yc - r);
