@@ -10,6 +10,15 @@ void Demo::init(BaseDisplay &display)
 
 void Demo::loop(BaseDisplay &display, uint32_t millis)
 {
+    static uint16_t backbuf[32 * 32];
+    static BufferDisplay bd(backbuf, 32, 32);
+    if (!t) {
+        for (int i = 0; i < 32; i += 8)
+            for (int j = 0; j < 32; j += 8)
+                bd.fill(Rect(i, j, i + 8, j + 8), ((i + j) & 8) ? RGB565::rgb888(0xC0C0C0) : RGB565::rgb888(0x404040));
+    }
+    display.copy16bit(Point(display.width() - 32, 0), 32, 32, backbuf, 32);
+
     static const char axis[] = "XYZABC";
     char buf[64];
     int width = 300, height = 50;

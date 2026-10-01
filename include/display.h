@@ -1,6 +1,7 @@
 #pragma once
 
 #include "types.h"
+#include <algorithm>
 
 class BaseDisplay
 {
@@ -24,9 +25,9 @@ public:
     virtual void init() = 0;
     virtual void complete() {}
     virtual void fill(const Rect &rect, RGB565 colour) = 0;
-    virtual void copy(const Rect &rect, const RGB565 *src) = 0;
     virtual void copy1bit(const Point &pt, int pixels, int height, const uint8_t *src, int x_offset, int pitch, RGB565 bg, RGB565 fg) = 0;
     virtual void copy4bit(const Point &pt, int pixels, int height, const uint8_t *src, int x_offset, int pitch, const RGB565 *cmap) = 0;
+    virtual void copy16bit(const Point &pt, int width, int height, const uint16_t *src, int pitch) = 0;
 };
 
 template<typename T>
@@ -48,23 +49,6 @@ public:
         };
         Solid solid{colour.val()};
         output(this, rect, solid);
-    }
-    void copy(const Rect &rect, const RGB565 *src) {
-        struct Slurp {
-            const RGB565 *src;
-            int pos;
-            int pitch;
-            inline uint16_t next() { return src[pos++].val(); }
-            inline void skip(int count) {
-                pos += count;
-            }
-            inline void line(int count) {
-                pos = 0;
-                src += count * pitch;
-            }
-        };
-        Slurp slurp{src, 0, rect.width()};
-        output(this, rect, slurp);
     }
     void copy1bit(const Point &pt, int pixels, int height, const uint8_t *src, int x_offset, int pitch, RGB565 bg, RGB565 fg) {
         struct Slurp {
@@ -111,6 +95,58 @@ public:
         };
         Slurp slurp{src, x_offset, x_offset, pitch, cmap};
         output(this, Rect(pt.x, pt.y, pt.x + pixels, pt.y + height), slurp);
+    }
+    void copy16bit(const Point &pt, int width, int height, const uint16_t *src, int pitch) {
+        struct Slurp {
+            const uint16_t *src;
+            int pos;
+            int pitch;
+            inline uint16_t next() {
+                return src[pos++];
+            }
+            inline void skip(int count) {
+                pos += count;
+            }
+            inline void line(int count) {
+                src += count * pitch;
+                pos = 0;
+            }
+        };
+        Slurp slurp{src, 0, pitch};
+        output(this, Rect(pt.x, pt.y, pt.x + width, pt.y + height), slurp);
+    }
+};
+
+class BufferDisplay: public BaseDisplayOps<BufferDisplay>
+{
+protected:
+    uint16_t *data;
+public:
+    BufferDisplay(uint16_t *_data, int _width, int _height)
+    : BaseDisplayOps<BufferDisplay>(_width, _height)
+    , data(_data)
+    {}
+    void init() {}
+    template<typename Gen>
+    void output(const Rect &rect, Gen &gen) {
+        if (rect.empty())
+            return;
+        Rect clipped = rect.intersection(this->clip);
+        if (clipped.empty())
+            return;
+        int xl = clipped.left(), xr = clipped.right();
+        int yt = clipped.top(), yb = clipped.bottom();
+
+        if (yt > rect.top())
+            gen.line(yt - rect.top());
+        for (int y = yt; y < yb; y++) {
+            if (xl > rect.left())
+                gen.skip(xl - rect.left());
+            uint16_t *wptr = &data[y * w + xl];
+            for (int x = xl; x < xr; ++x)
+                *wptr++ = gen.next();
+            gen.line(1);
+        }
     }
 };
 
