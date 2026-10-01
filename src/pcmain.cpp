@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
 
     bool quit = false;
     display.init();
-    demo.init();
+    demo.init(display);
     
     clock_t start = clock();
 

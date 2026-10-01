@@ -114,8 +114,8 @@ public:
     }
 };
 
-template<class DisplayInterface>
-class ChunkOutputDisplay: public BaseDisplayOps<ChunkOutputDisplay<DisplayInterface> >
+template<class ChunkInterface, int Width, int Height>
+class ChunkOutputDisplay: public BaseDisplayOps<ChunkOutputDisplay<ChunkInterface, Width, Height> >
 {
 protected:
     volatile uint16_t *data; // must point to DMAable memory
@@ -123,6 +123,7 @@ protected:
     volatile uint32_t read_ptr, write_ptr;
 protected:
     int availableToWrite() const {
+        // Cannot distinguish between full and empty with two pointers, so 1 byte will get wasted.
         return (read_ptr <= write_ptr) ? (size - 1 - write_ptr + read_ptr) : (read_ptr - write_ptr - 1);
     }
     inline void write(uint16_t value) {
@@ -136,8 +137,7 @@ protected:
             read_ptr = 0;
         return value;
     }
-    void writeArea(int xl, int yt, int xr, int yb) {
-        // Cannot distinguish between full and empty with two pointers, so 1 byte will get wasted.
+    inline void writeArea(int xl, int yt, int xr, int yb) {
         write(xl);
         write(yt);
         write(xr);
@@ -157,35 +157,37 @@ protected:
         }
     }
     bool canSendChunk() {
-        if (DisplayInterface::busy())
+        if (ChunkInterface::busy())
             return false;
         if (read_ptr == write_ptr)
             return false;
         return true;
     }
     void sendChunk(int xl, int yt, int xr, int yb) {
-        DisplayInterface::writeArea(xl, yt, xr, yb);
+        ChunkInterface::writeArea(xl, yt, xr, yb);
         uint32_t words = (xr - xl) * (yb - yt);
         if (read_ptr + words > size) {
             uint32_t span = size - read_ptr;
             uint32_t rest = words - span;
-            DisplayInterface::pixels(&data[read_ptr], span, [this, rest] {
+            ChunkInterface::pixels(&data[read_ptr], span, [this, rest] {
                 read_ptr = 0;
-                DisplayInterface::pixels(&data[0], rest, [this, rest] {
+                ChunkInterface::pixels(&data[0], rest, [this, rest] {
                     read_ptr = rest;
+                    trySendChunk();
                 });
             });
             return;
         }
-        DisplayInterface::pixels(&data[read_ptr], words, [this, words] {
+        ChunkInterface::pixels(&data[read_ptr], words, [this, words] {
             read_ptr = (read_ptr + words) % size;
+            trySendChunk();
         });
     }
 public:
-    static constexpr int WIDTH = DisplayInterface::WIDTH;
-    static constexpr int HEIGHT = DisplayInterface::HEIGHT;
+    using DisplayInterface = ChunkInterface;
+
     ChunkOutputDisplay(uint16_t *_data, uint32_t _size)
-    : BaseDisplayOps<ChunkOutputDisplay<DisplayInterface>>(WIDTH, HEIGHT)
+    : BaseDisplayOps<ChunkOutputDisplay<ChunkInterface, Width, Height>>(Width, Height)
     , data{_data}
     , size{_size}
     , read_ptr{0}
@@ -196,9 +198,9 @@ public:
         limit = std::min<uint32_t>(size / 4 - 5, 65535);
     }
     void init() {
-        DisplayInterface::init();
     }
     virtual void idle() {
+        ChunkInterface::idle();
     }
     void complete() {
         while(read_ptr != write_ptr)
@@ -237,6 +239,7 @@ public:
             }
             y0 = ye;
         }
+        trySendChunk();
     }
 };
 
