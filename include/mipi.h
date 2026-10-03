@@ -27,7 +27,11 @@ public:
         setIdle(false);         // Idle OFF
         setPartial(false);      // Normal mode ON
     }
-    
+
+    static void softReset() {
+        cmd(0x01);
+    }
+
     static void setInvert(bool invert) {
         cmd(invert ? 0x21 : 0x20);
     }

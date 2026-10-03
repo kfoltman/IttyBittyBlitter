@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef IBB_STM32
+
 #include "display.h"
 #include <cstdint>
 #include <initializer_list>
@@ -160,4 +162,4 @@ public:
     }
 };
 
-
+#endif
