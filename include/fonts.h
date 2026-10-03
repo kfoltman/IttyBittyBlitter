@@ -27,5 +27,3 @@ public:
     void drawPaddedText(BaseDisplay &disp, const Palette16 &palette, Rect rc, uint32_t flags, const char *text, int len = -1);
 };
 
-extern Font font_small;
-extern Font font_large;

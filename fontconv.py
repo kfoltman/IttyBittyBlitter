@@ -120,10 +120,10 @@ def font_export(of, export_name, family, size, weight=QFont.Weight.Normal, itali
         font_bits += "\n"
 
     of.write(f"""\
-static const uint16_t {export_name}_xs[] = {"{"}
+static FLASHMEM const uint16_t {export_name}_xs[] = {"{"}
 {font_xs}{"}"};
 
-static const uint8_t {export_name}_bits[] = {"{"}
+static FLASHMEM const uint8_t {export_name}_bits[] = {"{"}
 {font_bits}{"}"};
 
 Font {export_name} = {"{"}
@@ -138,13 +138,16 @@ Font {export_name} = {"{"}
     return nbytes
     
 nbytes = 0
+nbytes_small = 0
+nbytes_large = 0
 app = QGuiApplication(sys.argv)
 with open("src/fonts.inc", "w") as of:
     nbytes += font_export(of, 'font_small', 'DejaVu Sans', 22, antialias=True)
     of.write("#ifdef SMALL_SCREEN\n")
-    nbytes += font_export(of, 'font_large', 'DejaVu Sans Mono', 30, antialias=True, charset=".:0123456789ABCXYZ")
+    nbytes_small += font_export(of, 'font_large', 'DejaVu Sans Mono', 30, antialias=True, charset=".:0123456789ABCXYZ")
     of.write("#else\n")
-    nbytes += font_export(of, 'font_large', 'DejaVu Sans Mono', 48, antialias=True, charset=".:0123456789ABCXYZ")
+    nbytes_large += font_export(of, 'font_large', 'DejaVu Sans Mono', 48, antialias=True, charset=".:0123456789ABCXYZ")
     of.write("#endif\n")
 
-print (f"Total {nbytes} bytes")
+print (f"Small display: total {nbytes+nbytes_small} bytes")
+print (f"Large display: total {nbytes+nbytes_large} bytes")

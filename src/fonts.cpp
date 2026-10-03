@@ -71,5 +71,3 @@ void Font::drawPaddedText(BaseDisplay &disp, const Palette16 &palette, Rect rc, 
             disp.fill(Rect(rc.left() + width, rc.top(), rc.right(), rc.top() + height), palette.bg());
     }
 }
-
-#include "fonts.inc"

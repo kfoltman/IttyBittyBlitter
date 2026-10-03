@@ -1,6 +1,14 @@
 #include "demo.h"
 #include <cstdio>
 
+#ifndef DESKTOP_SIM
+#include <Arduino.h>
+#endif
+
+extern Font font_small;
+extern Font font_large;
+#include "fonts.inc"
+
 void Demo::init(BaseDisplay &display)
 {
     palette = Palette16{RGB565::rgb888(0x000000), RGB565::rgb888(0x00FF00)};
@@ -30,7 +38,7 @@ void Demo::loop(BaseDisplay &display, uint32_t millis)
     }
     if (t) {
         snprintf(buf, 64, "%0.1f FPS", t * 1000.0 / std::max<uint32_t>(1, millis - startTime));
-        Palette16 palette = Palette16{RGB565::rgb888(0xF00000), RGB565::rgb888(0x00FF00)};
+        Palette16 palette = Palette16{RGB565::rgb888(0x000000), RGB565::rgb888(0x00FF00)};
         font_small.drawPaddedText(display, palette, Rect(display.width() - 144, display.height() - 40, display.width(), display.height()), Font::DT_CENTRE, buf);
     } else {
         startTime = millis;
@@ -38,3 +46,4 @@ void Demo::loop(BaseDisplay &display, uint32_t millis)
     display.complete();
     t++;
 }
+

@@ -9,13 +9,13 @@
 #define DISPLAY_CS_PIN 10
 #define LCD_IS_IPS false
 
-static SPISettings settings(10000000, MSBFIRST, SPI_MODE0);
-static EventResponder responder;
-static std::function<void()> spiCallback;
-
 class SPIWrapper
 {
 public:
+    static SPISettings settings;
+    static EventResponder responder;
+    static std::function<void()> spiCallback;
+
     static void init() {
         responder.attachImmediate(SPIWrapper::spiComplete);
     }
@@ -52,6 +52,10 @@ public:
         digitalWrite(CTL_DATA_PIN, HIGH);
     }
 };
+
+SPISettings SPIWrapper::settings{50000000, MSBFIRST, SPI_MODE0};
+EventResponder SPIWrapper::responder;
+std::function<void()> SPIWrapper::spiCallback;
 
 using MIPI = MIPIDisplay<AsyncFourPinSPI<SPIWrapper>>;
 
