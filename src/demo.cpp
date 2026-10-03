@@ -4,7 +4,7 @@
 void Demo::init(BaseDisplay &display)
 {
     palette = Palette16{RGB565::rgb888(0x000000), RGB565::rgb888(0x00FF00)};
-    display.fill(Rect(0, 0, display.width(), display.height()), RGB565::rgb888(0x000000));
+    display.fill(Rect(0, 0, display.width(), display.height()), RGB565::rgb888(0));
     display.complete();
 }
 
@@ -21,15 +21,17 @@ void Demo::loop(BaseDisplay &display, uint32_t millis)
 
     static const char axis[] = "XYZABC";
     char buf[64];
-    int width = 300, height = 50;
+    int width = font_large.textWidth("X:1234.567"), height = font_large.height;
     for (int i = 0; axis[i]; ++i) {
+        if ((i + 1) * height >= display.height())
+            break;
         snprintf(buf, 64, "%c:%8.3f", axis[i], t * 0.001 + i * 0.25);
-        font_large.drawPaddedText(display, palette, Rect(0, i * height, width, (i + 1) * height), Font::DT_RIGHT, buf);
+        font_large.drawPaddedText(display, palette, Rect(0, i * height, width, (i + 1) * height), Font::DT_LEFT, buf);
     }
     if (t) {
         snprintf(buf, 64, "%0.1f FPS", t * 1000.0 / std::max<uint32_t>(1, millis - startTime));
         Palette16 palette = Palette16{RGB565::rgb888(0xF00000), RGB565::rgb888(0x00FF00)};
-        font_small.drawPaddedText(display, palette, Rect(display.width() - 144, 280, display.width(), 320), Font::DT_CENTRE, buf);
+        font_small.drawPaddedText(display, palette, Rect(display.width() - 144, display.height() - 40, display.width(), display.height()), Font::DT_CENTRE, buf);
     } else {
         startTime = millis;
     }

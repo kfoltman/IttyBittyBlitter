@@ -141,6 +141,10 @@ nbytes = 0
 app = QGuiApplication(sys.argv)
 with open("src/fonts.inc", "w") as of:
     nbytes += font_export(of, 'font_small', 'DejaVu Sans', 22, antialias=True)
+    of.write("#ifdef SMALL_SCREEN\n")
+    nbytes += font_export(of, 'font_large', 'DejaVu Sans Mono', 30, antialias=True, charset=".:0123456789ABCXYZ")
+    of.write("#else\n")
     nbytes += font_export(of, 'font_large', 'DejaVu Sans Mono', 48, antialias=True, charset=".:0123456789ABCXYZ")
+    of.write("#endif\n")
 
 print (f"Total {nbytes} bytes")
