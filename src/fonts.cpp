@@ -22,13 +22,27 @@ int Font::textWidth(const char *text, int len)
 
 void Font::drawText(BaseDisplay &disp, const Palette16 &palette, Point pt, const char *text, int len)
 {
+    auto isValidChar = [this](uint8_t ch) {
+        if (ch < firstChar)
+            return false;
+        if (ch >= firstChar + charCount)
+            return false;
+        if (xs[ch - firstChar] == xs[ch - firstChar + 1])
+            return false;
+        return true;
+    };
     if (len == -1)
         len = strlen(text);
     for (int c = 0; c < len; ++c) {
         uint8_t ch = text[c];
-        if (ch < firstChar || ch >= firstChar + charCount) {
-            disp.fill(Rect(pt.x, pt.y, pt.x + spaceWidth, pt.y + height), palette.bg());
-            pt.x += spaceWidth;
+        if (!isValidChar(ch)) {
+            int spaces = 1;
+            while(c + 1 < len && !isValidChar(text[c + 1])) {
+                spaces++;
+                c++;
+            }
+            disp.fill(Rect(pt.x, pt.y, pt.x + spaces * spaceWidth, pt.y + height), palette.fg());
+            pt.x += spaces * spaceWidth;
             continue;
         }
         int pos = xs[ch - firstChar];
