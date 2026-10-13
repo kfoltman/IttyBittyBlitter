@@ -41,7 +41,7 @@ void Font::drawText(BaseDisplay &disp, const Palette16 &palette, Point pt, const
                 spaces++;
                 c++;
             }
-            disp.fill(Rect(pt.x, pt.y, pt.x + spaces * spaceWidth, pt.y + height), palette.fg());
+            disp.fill(Rect(pt.x, pt.y, pt.x + spaces * spaceWidth, pt.y + height), palette.bg());
             pt.x += spaces * spaceWidth;
             continue;
         }
