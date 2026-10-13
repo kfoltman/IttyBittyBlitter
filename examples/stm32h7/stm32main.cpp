@@ -1,9 +1,9 @@
 #include <Arduino.h>
 #include <stm32h7xx.h>
-#include "display.h"
-#include "fonts.h"
-#include "mipi.h"
-#include "stm32.h"
+#include "IttyBittyBlitter/display.h"
+#include "IttyBittyBlitter/fonts.h"
+#include "IttyBittyBlitter/mipi.h"
+#include "IttyBittyBlitter/stm32.h"
 #include "demo.h"
 
 #define LCD_ADDR_LINE 16

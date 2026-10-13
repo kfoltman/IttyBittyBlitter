@@ -1,4 +1,6 @@
-#include "stm32.h"
+#include "IttyBittyBlitter/stm32.h"
+
+#ifdef IBB_STM32
 
 volatile uint16_t *STM32FMC::lcd_ctl; 
 volatile uint16_t *STM32FMC::lcd_data;
@@ -115,3 +117,5 @@ void STM32FMCWithDMA::onDMAInterrupt()
     swap(callback, dmaCallback);
     callback();
 }
+
+#endif

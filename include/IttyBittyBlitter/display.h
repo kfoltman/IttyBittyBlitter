@@ -19,7 +19,7 @@ public:
     void setClipRect(const Rect &cr) {
         clip = Rect(std::max<int16_t>(0, cr.left()), std::max<int16_t>(0, cr.top()), std::min<int16_t>(w, cr.right()), std::min<int16_t>(h, cr.bottom()));
     }
-    const Rect &getClipRect() {
+    const Rect &getClipRect() const {
         return clip;
     }
     virtual void init() = 0;

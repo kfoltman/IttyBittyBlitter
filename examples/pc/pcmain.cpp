@@ -1,7 +1,7 @@
 #include <SDL/SDL.h>
 #include <ctime>
-#include "display.h"
-#include "fonts.h"
+#include "IttyBittyBlitter/display.h"
+#include "IttyBittyBlitter/fonts.h"
 
 #include "demo.h"
 

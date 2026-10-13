@@ -1,8 +1,8 @@
 #include <Arduino.h>
-#include "display.h"
-#include "fonts.h"
-#include "mipi.h"
-#include "ArduinoSPI.h"
+#include "IttyBittyBlitter/display.h"
+#include "IttyBittyBlitter/fonts.h"
+#include "IttyBittyBlitter/mipi.h"
+#include "IttyBittyBlitter/ArduinoSPI.h"
 #include "demo.h"
 
 #define CTL_DATA_PIN 9

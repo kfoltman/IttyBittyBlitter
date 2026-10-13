@@ -1,5 +1,5 @@
-#include "fonts.h"
-#include "display.h"
+#include "IttyBittyBlitter/fonts.h"
+#include "IttyBittyBlitter/display.h"
 #include <cstring>
 
 int Font::textWidth(const char *text, int len)
