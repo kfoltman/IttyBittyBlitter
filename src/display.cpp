@@ -32,6 +32,46 @@ void circle(BaseDisplay &disp, int xc, int yc, int r, RGB565 fg)
     }
 }
 
+void circle(BaseDisplay &disp, int xc, int yc, int r, RGB565 fg, RGB565 bg)
+{
+    int ys = std::max<int16_t>(0, yc - r);
+    int ye = std::min<int16_t>(disp.height(), yc + r + 1);
+    int w = disp.width();
+
+    int l = (2896 * r) >> 12; // approx. sqrt(2) / 2
+    for (int s = 0; s < r; s++) {
+        float cf = sqrtf(r * r - s * s);
+        int c = floor(cf);
+        if (c < s) // stop after a full octant
+            break;
+        int xleft = std::max<int16_t>(0, xc - c);
+        int xright = std::min<int16_t>(xc + c + 1, w);
+        uint8_t alpha = 16 * (cf - c);
+        int shift = alpha < 16 ? 1 : 0;
+        disp.fill(Rect(xleft + shift, yc - s, xright - shift, yc - s + 1), fg);
+        disp.fill(Rect(xc - s, yc - c + shift, xc - s + 1, yc - l), fg);
+        disp.fill(Rect(xc - s, yc + l, xc - s + 1, yc + c + 1 - shift), fg);
+        if (s) {
+            disp.fill(Rect(xleft + shift, yc + s, xright - shift, yc + s + 1), fg);
+            disp.fill(Rect(xc + s, yc - c + shift, xc + s + 1, yc - l), fg);
+            disp.fill(Rect(xc + s, yc + l, xc + s + 1, yc + c + 1 - shift), fg);
+        }
+        if (shift) {
+            RGB565 mixed = RGB565::blend(bg, fg, alpha);
+            disp.fill(Rect(xleft, yc - s, xleft + 1, yc - s + 1), mixed);
+            disp.fill(Rect(xright - 1, yc - s, xright, yc - s + 1), mixed);
+            disp.fill(Rect(xleft, yc + s, xleft + 1, yc + s + 1), mixed);
+            disp.fill(Rect(xright - 1, yc + s, xright, yc + s + 1), mixed);
+            disp.fill(Rect(xc - s, yc - c, xc - s + 1, yc - c + 1), mixed);
+            disp.fill(Rect(xc + s, yc - c, xc + s + 1, yc - c + 1), mixed);
+            disp.fill(Rect(xc - s, yc + c, xc - s + 1, yc + c + 1), mixed);
+            disp.fill(Rect(xc + s, yc + c, xc + s + 1, yc + c + 1), mixed);
+        }
+    }
+}
+
+
+
 void triangle(BaseDisplay &disp, Point p1, Point p2, Point p3, RGB565 fg)
 {
     if (p3.y < p2.y)

@@ -280,4 +280,5 @@ public:
 };
 
 extern void circle(BaseDisplay &disp, int xc, int yc, int r, RGB565 fg);
+extern void circle(BaseDisplay &disp, int xc, int yc, int r, RGB565 fg, RGB565 bg);
 extern void triangle(BaseDisplay &disp, Point p1, Point p2, Point p3, RGB565 fg);
