@@ -1,5 +1,7 @@
 #include <SDL/SDL.h>
 #include <ctime>
+#include <iostream>
+#include <unistd.h>
 #include "IttyBittyBlitter/display.h"
 #include "IttyBittyBlitter/fonts.h"
 
@@ -61,6 +63,13 @@ public:
     }
 };
 
+uint32_t ms()
+{
+    struct timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts);
+    return ts.tv_sec * 1000U + ts.tv_nsec / 1000000U;
+}
+
 int main(int argc, char *argv[])
 {
     if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
@@ -79,7 +88,13 @@ int main(int argc, char *argv[])
     clock_t start = clock();
 
     while(true) {
-        demo.loop(display, (clock() - start) / 1000);
+        uint32_t millis_start = ms();
+        demo.loop(display, millis_start);
+        uint32_t millis_end = ms();
+        uint32_t elapsed = millis_end - millis_start;
+        if (elapsed < 8) {
+            usleep(1000 * (8 - elapsed));
+        }
 
         SDL_Event sdlEvent;
         bool quit = false;
