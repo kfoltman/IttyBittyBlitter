@@ -24,6 +24,8 @@ void Demo::loop(BaseDisplay &display, uint32_t millis)
         for (int i = 0; i < 32; i += 8)
             for (int j = 0; j < 32; j += 8)
                 bd.fill(Rect(i, j, i + 8, j + 8), ((i + j) & 8) ? RGB565::rgb888(0xC0C0C0) : RGB565::rgb888(0x404040));
+    } else {
+        circle(display, display.width() - 64, 32, (((millis - startTime) / 100) & 31), RGB565::rgb888(0x00FF00));
     }
     display.copy16bit(Point(display.width() - 32, 0), 32, 32, backbuf, 32);
 

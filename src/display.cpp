@@ -9,10 +9,25 @@ void circle(BaseDisplay &disp, int xc, int yc, int r, RGB565 fg)
     int ye = std::min<int16_t>(disp.height(), yc + r + 1);
     int w = disp.width();
 
-    for (int y = ys; y < ye; ++y) {
-        float xrf = sqrtf(r * r - (y - yc) * (y - yc));
-        int xr = ceilf(xrf);
-        disp.fill(Rect(std::max<int16_t>(0, xc - xr), y, std::min<int16_t>(xc + xr + 1, w), y + 1), fg);
+    int r2 = r * r;
+    int c = r;
+    int l = (2896 * r) >> 12; // approx. sqrt(2) / 2
+    for (int s = 0; s < r; ++s) {
+        if (c * c > r2 - s * s)
+            c--;
+        if (c < s)
+            break;
+        int xr = c;
+        int xleft = std::max<int16_t>(0, xc - xr);
+        int xright = std::min<int16_t>(xc + xr + 1, w);
+        disp.fill(Rect(xleft, yc - s, xright, yc - s + 1), fg);
+        disp.fill(Rect(xc - s, yc - c, xc - s + 1, yc - l), fg);
+        disp.fill(Rect(xc - s, yc + l, xc - s + 1, yc + c + 1), fg);
+        if (s) {
+            disp.fill(Rect(xleft, yc + s, xright, yc + s + 1), fg);
+            disp.fill(Rect(xc + s, yc - c, xc + s + 1, yc - l), fg);
+            disp.fill(Rect(xc + s, yc + l, xc + s + 1, yc + c + 1), fg);
+        }
     }
 }
 
