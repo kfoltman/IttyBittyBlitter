@@ -47,7 +47,7 @@ void circle(BaseDisplay &disp, int xc, int yc, int r, RGB565 fg, RGB565 bg)
         int xleft = std::max<int16_t>(0, xc - c);
         int xright = std::min<int16_t>(xc + c + 1, w);
         uint8_t alpha = 16 * (cf - c);
-        int shift = alpha < 16 ? 1 : 0;
+        int shift = 1;
         disp.fill(Rect(xleft + shift, yc - s, xright - shift, yc - s + 1), fg);
         disp.fill(Rect(xc - s, yc - c + shift, xc - s + 1, yc - l), fg);
         disp.fill(Rect(xc - s, yc + l, xc - s + 1, yc + c + 1 - shift), fg);
@@ -56,7 +56,7 @@ void circle(BaseDisplay &disp, int xc, int yc, int r, RGB565 fg, RGB565 bg)
             disp.fill(Rect(xc + s, yc - c + shift, xc + s + 1, yc - l), fg);
             disp.fill(Rect(xc + s, yc + l, xc + s + 1, yc + c + 1 - shift), fg);
         }
-        if (shift) {
+        if (alpha) {
             RGB565 mixed = RGB565::blend(bg, fg, alpha);
             disp.fill(Rect(xleft, yc - s, xleft + 1, yc - s + 1), mixed);
             disp.fill(Rect(xright - 1, yc - s, xright, yc - s + 1), mixed);
