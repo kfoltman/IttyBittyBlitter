@@ -1,7 +1,6 @@
 #pragma once
 
-#include "IttyBittyBlitter/display.h"
-#include "IttyBittyBlitter/fonts.h"
+#include "IttyBittyBlitter.h"
 
 class Demo
 {
