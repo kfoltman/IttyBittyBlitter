@@ -1,7 +1,5 @@
 #include <SDL/SDL.h>
 #include <ctime>
-#include <iostream>
-#include <unistd.h>
 #include "IttyBittyBlitter/display.h"
 #include "IttyBittyBlitter/fonts.h"
 
@@ -85,15 +83,16 @@ int main(int argc, char *argv[])
     display.init();
     demo.init(display);
     
-    clock_t start = clock();
+    clock_t start = ms();
 
     while(true) {
         uint32_t millis_start = ms();
-        demo.loop(display, millis_start);
+        demo.loop(display, millis_start - start);
         uint32_t millis_end = ms();
         uint32_t elapsed = millis_end - millis_start;
         if (elapsed < 8) {
-            usleep(1000 * (8 - elapsed));
+            struct timespec duration = {0, 1000000LL * (8 - elapsed)};
+            nanosleep(&duration, nullptr);
         }
 
         SDL_Event sdlEvent;

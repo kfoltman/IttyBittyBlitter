@@ -5,8 +5,6 @@
 #include <Arduino.h>
 #endif
 
-extern Font font_small;
-extern Font font_large;
 #include "fonts.inc"
 
 void Demo::init(BaseDisplay &display)
