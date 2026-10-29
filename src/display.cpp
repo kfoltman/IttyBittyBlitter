@@ -9,13 +9,13 @@ void circle(BaseDisplay &disp, int xc, int yc, int r, RGB565 fg)
     int ye = std::min<int16_t>(disp.height(), yc + r + 1);
     int w = disp.width();
 
-    int r2 = r * r;
-    int c = r;
+    int r2minuss2 = r * r;
+    int c = r, c2 = r2minuss2;
     int l = (2896 * r) >> 12; // approx. sqrt(2) / 2
-    for (int s = 0; s < r; ++s) {
-        if (c * c > r2 - s * s)
-            c--;
-        if (c < s)
+    for (int s = 0; s < r; s++) {
+        if (c2 > r2minuss2)
+            c2 = c2 - 2 * (c--) + 1;
+        if (c < s) // stop after a full octant
             break;
         int xr = c;
         int xleft = std::max<int16_t>(0, xc - xr);
@@ -28,6 +28,7 @@ void circle(BaseDisplay &disp, int xc, int yc, int r, RGB565 fg)
             disp.fill(Rect(xc + s, yc - c, xc + s + 1, yc - l), fg);
             disp.fill(Rect(xc + s, yc + l, xc + s + 1, yc + c + 1), fg);
         }
+        r2minuss2 = r2minuss2 - 2 * s + 1;
     }
 }
 
