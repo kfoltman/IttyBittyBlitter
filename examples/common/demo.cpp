@@ -23,10 +23,13 @@ void Demo::loop(BaseDisplay &display, uint32_t millis)
             for (int j = 0; j < 32; j += 8)
                 bd.fill(Rect(i, j, i + 8, j + 8), ((i + j) & 8) ? RGB565::rgb888(0xC0C0C0) : RGB565::rgb888(0x404040));
     } else {
+        static uint16_t backbuf2[64 * 64];
+        static BufferDisplay bd2(backbuf2, 64, 64);
         int r1 = (((millis - startTime) / 100) & 31);
         int r2 = std::max(0, r1 - 5);
-        circle(display, display.width() - 64, 32, r1, RGB565::rgb888(0x00FF00), RGB565::rgb888(0x000000));
-        circle(display, display.width() - 64, 32, r2, RGB565::rgb888(0x000000), RGB565::rgb888(0x00FF00));
+        circle(bd2, 32, 32, r1, RGB565::rgb888(0x00FF00), RGB565::rgb888(0x000000));
+        circle(bd2, 32, 32, r2, RGB565::rgb888(0x000000), RGB565::rgb888(0x00FF00));
+        display.copy16bit(Point(display.width() - 96, 0), 64, 64, backbuf2, 64);
     }
     display.copy16bit(Point(display.width() - 32, 0), 32, 32, backbuf, 32);
 
