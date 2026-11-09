@@ -44,9 +44,6 @@ public:
         endCallback();
     }
 
-    static inline bool busy() {
-        return false;
-    }
     static void idle() {
         // Should never get called
     }
@@ -90,9 +87,6 @@ public:
         SPIWrapper::bulk(src, count, endCallback);
     }
 
-    static inline bool busy() {
-        return SPIWrapper::busy();
-    }
     static void idle() {
         // Should never get called
     }

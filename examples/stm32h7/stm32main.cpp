@@ -14,14 +14,14 @@
 auto &display_fmcdma()
 {
     static uint16_t buffer[480 * 10 + 5];
-    static ChunkOutputDisplay<MIPIDisplay<STM32FMCWithDMA>, 480, 320> singleton(buffer, std::size(buffer));
+    static ChunkOutputDisplay<MIPIDisplay<STM32FMCWithDMA>> singleton(buffer, std::size(buffer), 480, 320);
     return singleton;
 }
 
 auto &display_fmccopy()
 {
     static uint16_t buffer[480 * 10 + 5];
-    static ChunkOutputDisplay<MIPIDisplay<STM32FMC>, 480, 320> singleton(buffer, std::size(buffer));
+    static ChunkOutputDisplay<MIPIDisplay<STM32FMC>> singleton(buffer, std::size(buffer), 480, 320);
     return singleton;
 }
 
@@ -40,7 +40,7 @@ auto &display()
 
 extern "C" void DMA1_Stream0_IRQHandler(void)
 {
-    STM32FMCWithDMA::onDMAInterrupt();
+    HAL_DMA_IRQHandler(&STM32FMCWithDMA::dma);
 }
 
 extern "C" int _write(const void *, int)

@@ -54,9 +54,6 @@ public:
         endCallback();
     }
 
-    static inline bool busy() {
-        return false;
-    }
     static void idle() {
         // Should never get called
     }
@@ -69,13 +66,10 @@ public:
     static std::function<void()> dmaCallback;
 
     static bool initDMA(DMA_Stream_TypeDef *stream, IRQn_Type irq);
-    static void onDMAInterrupt();
+    static void onDMAInterrupt(DMA_HandleTypeDef *pdma);
 
     static void pixels(const volatile uint16_t *src, uint32_t count, std::function<void()> endCallback);
 
-    static inline bool busy() {
-        return (bool)dmaCallback;
-    }
     static void idle() {
         __WFI();
     }

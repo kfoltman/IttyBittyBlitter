@@ -94,15 +94,22 @@ bool STM32FMCWithDMA::initDMA(DMA_Stream_TypeDef *stream, IRQn_Type irq)
         return false;
     HAL_NVIC_SetPriority(irq, 0, 0);
     HAL_NVIC_EnableIRQ(irq);
+    HAL_DMA_RegisterCallback(&dma, HAL_DMA_XFER_CPLT_CB_ID, &onDMAInterrupt);
     return true;
 }
 
 void STM32FMCWithDMA::pixels(const volatile uint16_t *src, uint32_t count, std::function<void()> endCallback)
 {
+    if (count < 4) {
+        for (int i = 0; i < count; ++i)
+            *lcd_data = src[i];
+        endCallback();
+        return;
+    }
     dmaCallback.swap(endCallback);
     uint32_t addr = (uint32_t)src;
     addr &= ~31;
-    uint32_t addr2 = ((uint32_t)(src + count)) + 31;
+    uint32_t addr2 = ((uint32_t)(src + 2 * count)) + 31;
     addr2 &= ~31;
     __disable_irq();
     SCB_CleanDCache_by_Addr((void *)addr, addr2 - addr);
@@ -110,11 +117,10 @@ void STM32FMCWithDMA::pixels(const volatile uint16_t *src, uint32_t count, std::
     HAL_DMA_Start_IT(&dma, (uint32_t)src, (uint32_t)lcd_data, count);
 }
 
-void STM32FMCWithDMA::onDMAInterrupt()
+void STM32FMCWithDMA::onDMAInterrupt(DMA_HandleTypeDef *pdma)
 {
-    HAL_DMA_IRQHandler(&dma);
     std::function<void()> callback;
-    swap(callback, dmaCallback);
+    callback.swap(dmaCallback);
     callback();
 }
 

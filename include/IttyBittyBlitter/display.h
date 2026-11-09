@@ -2,6 +2,15 @@
 
 #include "types.h"
 #include <algorithm>
+#include <atomic>
+
+#ifdef DESKTOP_SIM
+#include <cassert>
+#include <cstdio>
+#define pcassert assert
+#else
+#define pcassert(...)
+#endif
 
 class BaseDisplay
 {
@@ -150,88 +159,116 @@ public:
     }
 };
 
-template<class ChunkInterface, int Width, int Height>
-class ChunkOutputDisplay: public BaseDisplayOps<ChunkOutputDisplay<ChunkInterface, Width, Height> >
+template<class ChunkInterface>
+class ChunkOutputDisplay: public BaseDisplayOps<ChunkOutputDisplay<ChunkInterface> >
 {
 protected:
     volatile uint16_t *data; // must point to DMAable memory
     uint32_t size, limit;
-    volatile uint32_t read_ptr, write_ptr;
+    std::atomic_int read_ptr, write_ptr;
+    uint32_t tmp_read_ptr, tmp_write_ptr;
+    std::atomic_bool busy;
 protected:
     int availableToWrite() const {
         // Cannot distinguish between full and empty with two pointers, so 1 byte will get wasted.
         return (read_ptr <= write_ptr) ? (size - 1 - write_ptr + read_ptr) : (read_ptr - write_ptr - 1);
     }
     inline void write(uint16_t value) {
-        data[write_ptr++] = value;
-        if (write_ptr == size)
-            write_ptr = 0;
+        data[tmp_write_ptr++] = value;
+        if (tmp_write_ptr == size) {
+            tmp_write_ptr = 0;
+        }
     }
     inline uint16_t read() {
-        uint16_t value = data[read_ptr++];
-        if (read_ptr == size)
-            read_ptr = 0;
+        uint16_t value = data[tmp_read_ptr];
+        tmp_read_ptr = (tmp_read_ptr == size - 1) ? 0 : tmp_read_ptr + 1;
         return value;
     }
     inline void writeArea(int xl, int yt, int xr, int yb) {
+        pcassert(xl != xr);
+        pcassert(yt != yb);
         write(xl);
         write(yt);
         write(xr);
         write(yb);
     }
+private:
     void trySendChunk() {
-        if (read_ptr != write_ptr) {
-            if (canSendChunk()) {
-                int xl = read();
-                int yt = read();
-                int xr = read();
-                int yb = read();
-                sendChunk(xl, yt, xr, yb);
+        // This is a very delicate scheme, because this runs concurrently
+        // with the DMA or second thread pulling buffers. Write_ptr is constant,
+        // but read_ptr can change at any point if busy == true.
+        bool old_busy = busy;
+        std::atomic_thread_fence(std::memory_order_seq_cst);
+        if (read_ptr.load() != write_ptr.load()) {
+            if (!busy.exchange(true)) {
+                // *Now* read_ptr won't change. But it could have changed since the last 'if'
+                // if there was a transaction in progress at that point (old_busy).
+                if (!old_busy || read_ptr.load() != write_ptr.load()) {
+                    sendChunk();
+                } else {
+                    // We know that the flag was set in this function (via the exchange method).
+                    // Nothing else should be accessing it at the moment.
+                    busy = false;
+                }
             } else {
                 idle();
             }
         }
     }
-    bool canSendChunk() {
-        if (ChunkInterface::busy())
-            return false;
-        if (read_ptr == write_ptr)
-            return false;
-        return true;
+    void trySendNextChunk() {
+        std::atomic_thread_fence(std::memory_order_seq_cst);
+        if (read_ptr != write_ptr) {
+            sendChunk();
+        } else {
+            // This must stay as true whenever there is a possibility for
+            // read_ptr changing while the buffer gets written.
+            busy = false;
+        }
+        std::atomic_thread_fence(std::memory_order_seq_cst);
     }
-    void sendChunk(int xl, int yt, int xr, int yb) {
+    void sendChunk() {
+        int xl = read();
+        int yt = read();
+        int xr = read();
+        int yb = read();
+        pcassert(xl != xr);
+        pcassert(yt != yb);
         ChunkInterface::writeArea(xl, yt, xr, yb);
         uint32_t words = (xr - xl) * (yb - yt);
-        if (read_ptr + words > size) {
-            uint32_t span = size - read_ptr;
+        if (tmp_read_ptr + words > size) {
+            uint32_t span = size - tmp_read_ptr;
             uint32_t rest = words - span;
-            ChunkInterface::pixels(&data[read_ptr], span, [this, rest] {
-                read_ptr = 0;
+            ChunkInterface::pixels(&data[tmp_read_ptr], span, [this, rest] {
                 ChunkInterface::pixels(&data[0], rest, [this, rest] {
-                    read_ptr = rest;
-                    trySendChunk();
+                    read_ptr = tmp_read_ptr = rest;
+                    trySendNextChunk();
                 });
             });
             return;
         }
-        ChunkInterface::pixels(&data[read_ptr], words, [this, words] {
-            read_ptr = (read_ptr + words) % size;
-            trySendChunk();
+        ChunkInterface::pixels(&data[tmp_read_ptr], words, [this, words] {
+            read_ptr = tmp_read_ptr = (tmp_read_ptr + words) % size;
+            trySendNextChunk();
         });
     }
 public:
     using DisplayInterface = ChunkInterface;
 
-    ChunkOutputDisplay(uint16_t *_data, uint32_t _size)
-    : BaseDisplayOps<ChunkOutputDisplay<ChunkInterface, Width, Height>>(Width, Height)
+    ChunkOutputDisplay(uint16_t *_data, uint32_t _size, int16_t _width, int16_t _height)
+    : BaseDisplayOps<ChunkOutputDisplay<ChunkInterface>>(_width, _height)
     , data{_data}
     , size{_size}
     , read_ptr{0}
     , write_ptr{0}
+    , tmp_read_ptr{0}
+    , tmp_write_ptr{0}
+    , busy{false}
     {
+        ChunkInterface::init(_width, _height);
         // 64K DMA limit or not more than 25% of the buffer,
-        // including the header
-        limit = std::min<uint32_t>(size / 4 - 5, 65535);
+        // including the header, but it must fit at least
+        // one full width line.
+        limit = std::min<uint32_t>(std::max<uint32_t>(_width, size / 4 - 5), 65535);
     }
     void init() {
     }
@@ -256,11 +293,22 @@ public:
         if (yt > rect.top())
             gen.line(yt - rect.top());
         for (int y0 = yt; y0 < yb; ) {
-            int space = availableToWrite() - 4;
+            int space = availableToWrite() - 5;
             if (space > (int)limit)
                 space = limit;
             int max_lines = space / (xr - xl);
             if (max_lines < 1) {
+                // Assume that there are some buffers in circulation
+                // already. It might look like it should not be necessary
+                // to dispatch any chunks here, but due to a race between
+                // read and write pointer. The scenario is as follows:
+                // 1. The reader updates read_ptr
+                // 2. The reader checks if read_ptr == write_ptr (and it is)
+                // 3. The writer adds a new chunk, but does not send it
+                //    because busy = true.
+                // 4. The reader sets busy to false and goes idle
+                // 5. There is an outstanding chunk but the reader is idle
+                //    until re-awakened by (try)SendChunk
                 trySendChunk();
                 continue;
             }
@@ -274,8 +322,10 @@ public:
                 gen.line(1);
             }
             y0 = ye;
+            std::atomic_thread_fence(std::memory_order_seq_cst);
+            write_ptr = tmp_write_ptr;
+            trySendChunk();
         }
-        trySendChunk();
     }
 };
 

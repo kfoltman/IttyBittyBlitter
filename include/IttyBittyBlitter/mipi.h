@@ -17,6 +17,10 @@ public:
         cmd(0x2c);
     }
 
+    static void init(int width, int height) {
+        // Nothing depends on width/height.
+    }
+
     static void configure() {
         // Configure the display
         cmd(0x36, 0x28); // memory access control
