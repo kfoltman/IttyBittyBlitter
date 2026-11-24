@@ -5,8 +5,6 @@
 
 void circle(BaseDisplay &disp, int xc, int yc, int r, RGB565 fg)
 {
-    int ys = std::max<int16_t>(0, yc - r);
-    int ye = std::min<int16_t>(disp.height(), yc + r + 1);
     int w = disp.width();
 
     int r2minuss2 = r * r;
@@ -34,8 +32,6 @@ void circle(BaseDisplay &disp, int xc, int yc, int r, RGB565 fg)
 
 void circle(BaseDisplay &disp, int xc, int yc, int r, RGB565 fg, RGB565 bg)
 {
-    int ys = std::max<int16_t>(0, yc - r);
-    int ye = std::min<int16_t>(disp.height(), yc + r + 1);
     int w = disp.width();
 
     int l = (2896 * r) >> 12; // approx. sqrt(2) / 2
@@ -69,8 +65,6 @@ void circle(BaseDisplay &disp, int xc, int yc, int r, RGB565 fg, RGB565 bg)
         }
     }
 }
-
-
 
 void triangle(BaseDisplay &disp, Point p1, Point p2, Point p3, RGB565 fg)
 {
