@@ -61,8 +61,8 @@ using MIPI = MIPIDisplay<AsyncFourPinSPI<SPIWrapper>>;
 
 auto &display()
 {
-    static uint16_t buffer[480 * 10 + 5];
-    static ChunkOutputDisplay<MIPI, 320, 240> singleton(buffer, std::size(buffer));
+    static uint16_t buffer[320 * 10 + 5];
+    static ChunkOutputDisplay<MIPI> singleton(buffer, std::size(buffer), 320, 240);
     return singleton;
 }
 
