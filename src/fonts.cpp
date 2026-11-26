@@ -15,7 +15,7 @@ int Font::textWidth(const char *text, int len)
             continue;
         }
         int width = xs[ch - firstChar + 1] - xs[ch - firstChar];
-        totalWidth += width;
+        totalWidth += width ? width : spaceWidth;
     }
     return totalWidth;
 }
